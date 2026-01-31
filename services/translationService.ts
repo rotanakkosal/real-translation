@@ -1,13 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Lazy initialization to prevent runtime crashes if process is undefined during module load
+// @ts-ignore: process.env.API_KEY is replaced by Vite at build time
+const API_KEY = process.env.API_KEY;
+
 let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = () => {
   if (!aiClient) {
-    // Safely attempt to access process.env. The actual replacement happens at build time via vite.config.ts
-    const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) || '';
-    aiClient = new GoogleGenAI({ apiKey });
+    // Initialize the client with the injected API_KEY
+    aiClient = new GoogleGenAI({ apiKey: API_KEY || '' });
   }
   return aiClient;
 };
@@ -27,9 +28,9 @@ export interface TranslationResult {
 export const translateText = async ({ text, sourceLang, targetLang, isPolite }: TranslationParams): Promise<TranslationResult> => {
   if (!text.trim()) return { text: "" };
 
-  // Check if API key is present to provide a clear error message
-  const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY);
-  if (!apiKey) {
+  // Check if API key is present
+  if (!API_KEY) {
+    console.error("API Key is missing. Env var:", API_KEY);
     return { text: "", error: "Configuration Error: API_KEY is missing in Vercel Environment Variables." };
   }
 
@@ -58,14 +59,12 @@ export const translateText = async ({ text, sourceLang, targetLang, isPolite }: 
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: 'gemini-flash-lite-latest', // Using Flash Lite for low latency
+      model: 'gemini-flash-lite-latest',
       contents: prompt,
     });
     return { text: response.text?.trim() || "" };
   } catch (error: any) {
-    console.error("Translation error:", error);
-    // Return the actual error message to help debugging (e.g., "API key not valid")
-    // If response is blocked, it might be safety settings or quota
+    console.error("Translation error details:", error);
     return { text: "", error: error.message || "Translation failed. Please check your API Key and quota." };
   }
 };
