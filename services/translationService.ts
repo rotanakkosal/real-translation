@@ -5,7 +5,7 @@ let aiClient: GoogleGenAI | null = null;
 
 const getAiClient = () => {
   if (!aiClient) {
-    // Safely attempt to access process.env to avoid "process is not defined" errors in browser environments
+    // Safely attempt to access process.env. The actual replacement happens at build time via vite.config.ts
     const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) || '';
     aiClient = new GoogleGenAI({ apiKey });
   }
@@ -26,6 +26,12 @@ export interface TranslationResult {
 
 export const translateText = async ({ text, sourceLang, targetLang, isPolite }: TranslationParams): Promise<TranslationResult> => {
   if (!text.trim()) return { text: "" };
+
+  // Check if API key is present to provide a clear error message
+  const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY);
+  if (!apiKey) {
+    return { text: "", error: "Configuration Error: API_KEY is missing in Vercel Environment Variables." };
+  }
 
   let nuanceInstruction = "";
   
@@ -56,8 +62,10 @@ export const translateText = async ({ text, sourceLang, targetLang, isPolite }: 
       contents: prompt,
     });
     return { text: response.text?.trim() || "" };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Translation error:", error);
-    return { text: "", error: "Unable to translate. Please check your connection or try again." };
+    // Return the actual error message to help debugging (e.g., "API key not valid")
+    // If response is blocked, it might be safety settings or quota
+    return { text: "", error: error.message || "Translation failed. Please check your API Key and quota." };
   }
 };
