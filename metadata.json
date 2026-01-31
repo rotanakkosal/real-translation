@@ -1,0 +1,7 @@
+{
+  "name": "Real Translation",
+  "description": "A modern, real-time translation web application using Gemini Flash for low-latency translations with Korean nuance control.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
