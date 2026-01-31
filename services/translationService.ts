@@ -1,6 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization to prevent runtime crashes if process is undefined during module load
+let aiClient: GoogleGenAI | null = null;
+
+const getAiClient = () => {
+  if (!aiClient) {
+    // Safely attempt to access process.env to avoid "process is not defined" errors in browser environments
+    const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) || '';
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
+};
 
 export interface TranslationParams {
   text: string;
@@ -40,6 +50,7 @@ export const translateText = async ({ text, sourceLang, targetLang, isPolite }: 
   `;
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: 'gemini-flash-lite-latest', // Using Flash Lite for low latency
       contents: prompt,
