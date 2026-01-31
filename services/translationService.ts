@@ -65,6 +65,20 @@ export const translateText = async ({ text, sourceLang, targetLang, isPolite }: 
     return { text: response.text?.trim() || "" };
   } catch (error: any) {
     console.error("Translation error details:", error);
-    return { text: "", error: error.message || "Translation failed. Please check your API Key and quota." };
+    
+    const errorMessage = (error.message || error.toString()).toLowerCase();
+
+    // Check for specific error conditions: Quota Exceeded (429) or Resource Exhausted
+    if (
+        errorMessage.includes("429") || 
+        errorMessage.includes("quota") || 
+        errorMessage.includes("resource_exhausted") ||
+        errorMessage.includes("too many requests")
+    ) {
+        return { text: "", error: "The service is not available." };
+    }
+
+    // Generic error fallback
+    return { text: "", error: "Translation failed. Please try again." };
   }
 };
